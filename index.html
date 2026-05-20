@@ -1,1 +1,471 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BCU → Google Drive</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap');
+:root{
+  --bg:#0d1117;--panel:#161b22;--border:#30363d;
+  --green:#39d353;--blue:#58a6ff;--yellow:#e3b341;
+  --red:#f85149;--muted:#8b949e;--text:#e6edf3;
+  --accent:#1f6feb;--dim:#1158c7;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:28px 20px}
+.hdr{display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);padding-bottom:20px;margin-bottom:24px}
+.logo{background:var(--accent);border-radius:8px;padding:6px 10px;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:.72rem;color:#fff;letter-spacing:.05em}
+h1{font-size:1.1rem;font-weight:700}
+.sub{font-size:.72rem;color:var(--muted);margin-top:2px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:14px}
+.panel-title{font-size:.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px}
+label{font-size:.76rem;color:var(--muted);display:block;margin-bottom:5px}
+input,textarea{width:100%;background:#0d1117;border:1px solid var(--border);border-radius:6px;color:var(--text);padding:9px 12px;font-family:'IBM Plex Mono',monospace;font-size:.76rem;outline:none;transition:border-color .15s}
+input:focus,textarea:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:110px;line-height:1.5}
+.hint{font-size:.67rem;color:var(--muted);margin-top:5px;line-height:1.6}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.btn{display:inline-flex;align-items:center;gap:6px;border:none;border-radius:7px;padding:9px 18px;font-family:inherit;font-weight:600;font-size:.82rem;cursor:pointer;transition:all .15s;text-decoration:none}
+.btn-google{background:#fff;color:#333;border:1px solid #ccc}
+.btn-google:hover{background:#f5f5f5}
+.btn-google img{width:18px;height:18px}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--dim)}
+.btn-primary:disabled{background:#1f3a5f;color:#4a6a9f;cursor:not-allowed}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.btn-ghost:hover{border-color:var(--blue);color:var(--blue)}
+.btn-sm{padding:5px 12px;font-size:.72rem}
+.user-bar{display:flex;align-items:center;gap:10px;background:#0d2a12;border:1px solid #1f4a2a;border-radius:7px;padding:8px 14px;margin-bottom:12px}
+.user-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover}
+.user-name{font-size:.78rem;font-weight:600;color:var(--green)}
+.user-email{font-size:.67rem;color:var(--muted)}
+.folder-badge{display:flex;align-items:center;gap:8px;background:#0d1a2a;border:1px solid #1a3a5a;border-radius:7px;padding:8px 14px;margin-bottom:12px;font-size:.74rem}
+.folder-icon{font-size:1.1rem}
+.folder-name{color:var(--blue);font-weight:600}
+.folder-id{color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:.65rem}
+.progress-wrap{margin:10px 0}
+.progress-track{height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.progress-bar{height:100%;background:var(--green);border-radius:3px;transition:width .3s;width:0%}
+.progress-lbl{font-size:.7rem;color:var(--muted);margin-top:4px;font-family:'IBM Plex Mono',monospace}
+.log{background:#0d1117;border:1px solid var(--border);border-radius:6px;padding:10px;height:160px;overflow-y:auto;font-family:'IBM Plex Mono',monospace;font-size:.68rem;line-height:1.9}
+.log span{display:block}
+.ok{color:var(--green)}.err{color:var(--red)}.info{color:var(--blue)}.warn{color:var(--yellow)}
+.file-table{width:100%;border-collapse:collapse;font-size:.73rem;margin-top:10px}
+.file-table th{text-align:left;padding:5px 8px;color:var(--muted);font-size:.61rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border)}
+.file-table td{padding:5px 8px;border-bottom:1px solid #1c2128;vertical-align:middle}
+.file-table tr:hover td{background:#1c2128}
+.ext-badge{display:inline-block;padding:1px 6px;border-radius:3px;font-family:'IBM Plex Mono',monospace;font-size:.61rem;font-weight:700;text-transform:uppercase}
+.ext-xls,.ext-xlsx,.ext-xlsm{background:#1a3a1a;color:#4cc44c}
+.ext-csv{background:#1a2a3a;color:#58a6ff}
+.ext-pdf{background:#3a1a1a;color:#f85149}
+.ext-other{background:#2a2a1a;color:#e3b341}
+.dl-status{font-size:.67rem;font-family:'IBM Plex Mono',monospace;min-width:80px;text-align:right}
+.s-wait{color:var(--muted)}.s-fetch{color:var(--yellow)}.s-up{color:var(--blue)}.s-ok{color:var(--green)}.s-err{color:var(--red)}
+.cb{width:13px;height:13px;accent-color:var(--accent);cursor:pointer}
+.summary{display:flex;gap:20px;background:#0f2420;border:1px solid #1f4a3a;border-radius:7px;padding:10px 14px;margin-top:10px;font-size:.72rem}
+.sum-v{font-family:'IBM Plex Mono',monospace;font-weight:700}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;padding-top:10px;margin-top:10px;border-top:1px solid var(--border);align-items:center}
+.spacer{flex:1}
+.delay-row{display:flex;align-items:center;gap:8px;margin-top:8px}
+.delay-row label{margin:0;white-space:nowrap}
+input[type=range]{accent-color:var(--accent);width:90px}
+.dv{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--yellow);min-width:30px}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+@media(max-width:560px){.row2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
 
+<div class="hdr">
+  <div class="logo">BCU</div>
+  <div>
+    <h1>BCU → Google Drive</h1>
+    <div class="sub">Fetchea archivos del BCU y los sube directo a tu Drive — sin bajarlos al disco</div>
+  </div>
+</div>
+
+<!-- PASO 1: AUTH -->
+<div class="panel" id="panelAuth">
+  <div class="panel-title">① Conectar con Google</div>
+  <div id="authSection">
+    <p style="font-size:.76rem;color:var(--muted);margin-bottom:12px;line-height:1.6">
+      Autorizá el acceso a tu Google Drive. Los archivos del BCU se van a subir directamente a la carpeta <strong style="color:var(--blue)">BCU - Datos Regulatorios</strong> que ya existe en tu Drive.
+    </p>
+    <button class="btn btn-google" onclick="signIn()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+      Conectar con Google Drive
+    </button>
+  </div>
+  <div id="userBar" style="display:none">
+    <div class="user-bar">
+      <img class="user-avatar" id="userAvatar" src="" alt="">
+      <div>
+        <div class="user-name" id="userName"></div>
+        <div class="user-email" id="userEmail"></div>
+      </div>
+      <div style="margin-left:auto">
+        <button class="btn btn-ghost btn-sm" onclick="signOut()">Desconectar</button>
+      </div>
+    </div>
+    <div class="folder-badge">
+      <span class="folder-icon">📁</span>
+      <div>
+        <div class="folder-name">BCU - Datos Regulatorios</div>
+        <div class="folder-id" id="folderDisplay"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PASO 2: INPUT -->
+<div class="panel" id="panelInput" style="display:none">
+  <div class="panel-title">② Página del BCU</div>
+  <div style="margin-bottom:12px">
+    <label>URL exacta de la página abierta en el browser</label>
+    <input type="text" id="baseUrl" placeholder="https://www.bcu.gub.uy/Servicios-Financieros-SSF/Boletin SSF/2026/Abril/indice.htm">
+    <div class="hint">⚠️ Necesaria para resolver los links relativos con espacios correctamente</div>
+  </div>
+  <div>
+    <label>HTML de la página (Ctrl+U → Ctrl+A → Ctrl+C → pegá acá)</label>
+    <textarea id="htmlInput" placeholder="Pegá el código fuente HTML completo de la página del BCU..."></textarea>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+    <button class="btn btn-primary" id="btnScan" onclick="scan()">🔍 Escanear archivos</button>
+    <button class="btn btn-ghost btn-sm" onclick="clearAll()">✕ Limpiar</button>
+  </div>
+</div>
+
+<!-- PASO 3: ARCHIVOS + UPLOAD -->
+<div class="panel" id="panelFiles" style="display:none">
+  <div class="panel-title">③ Archivos detectados</div>
+
+  <div class="delay-row">
+    <label>Pausa entre subidas:</label>
+    <input type="range" id="delayRange" min="500" max="4000" step="100" value="1200"
+      oninput="document.getElementById('dv').textContent=this.value+'ms'">
+    <span class="dv" id="dv">1200ms</span>
+    <span style="font-size:.67rem;color:var(--muted)">(evita rate limits de la API de Drive)</span>
+  </div>
+
+  <div style="overflow-x:auto">
+    <table class="file-table">
+      <thead>
+        <tr>
+          <th style="width:24px"><input type="checkbox" id="chkAll" class="cb" onclick="toggleAll(this)"></th>
+          <th>Tipo</th>
+          <th>Nombre</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody id="ftbody"></tbody>
+    </table>
+  </div>
+
+  <div class="progress-wrap" id="pw" style="display:none">
+    <div class="progress-track"><div class="progress-bar" id="pb"></div></div>
+    <div class="progress-lbl" id="pl">Preparando...</div>
+  </div>
+
+  <div class="log" id="logBox"></div>
+
+  <div class="summary" id="summary" style="display:none">
+    <div>Subidos <span class="sum-v ok" id="sumOk">0</span></div>
+    <div>Errores <span class="sum-v err" id="sumErr">0</span></div>
+    <div>Omitidos <span class="sum-v warn" id="sumSkip">0</span></div>
+    <div style="margin-left:auto">
+      <a id="driveFolderLink" href="https://drive.google.com/drive/folders/1MWkb6A-HmaOq_qckYmNX6oJcDIC_jV_m" 
+         target="_blank" class="btn btn-ghost btn-sm" style="text-decoration:none">📂 Ver en Drive</a>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <button class="btn btn-ghost btn-sm" onclick="selExt('xls,xlsx,xlsm')">Seleccionar XLS/XLSX</button>
+    <button class="btn btn-ghost btn-sm" onclick="selExt('pdf')">Seleccionar PDF</button>
+    <button class="btn btn-ghost btn-sm" onclick="deselAll()">Deseleccionar todo</button>
+    <div class="spacer"></div>
+    <button class="btn btn-primary" id="btnUp" onclick="startUpload()" style="display:none">⬆ Subir a Drive</button>
+    <button class="btn btn-ghost btn-sm" id="btnStop" onclick="stopFlag=true" style="display:none">⏹ Detener</button>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────
+const CLIENT_ID  = '184658432670-h2um7b7ba486tctlvknl1efpbj54d0qf.apps.googleusercontent.com';
+const FOLDER_ID  = '1MWkb6A-HmaOq_qckYmNX6oJcDIC_jV_m';
+const SCOPES     = 'https://www.googleapis.com/auth/drive.file';
+const TARGET_EXT = ['xls','xlsx','xlsm','xltx','csv','pdf','ods','zip','docx'];
+const MIME_MAP   = {
+  xls:'application/vnd.ms-excel',
+  xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  xlsm:'application/vnd.ms-excel.sheet.macroEnabled.12',
+  csv:'text/csv',
+  pdf:'application/pdf',
+  ods:'application/vnd.oasis.opendocument.spreadsheet',
+  zip:'application/zip',
+  docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  default:'application/octet-stream'
+};
+
+// ── STATE ─────────────────────────────────────────────────────────────────
+let tokenClient, accessToken = null, files = [], stopFlag = false;
+
+// ── GOOGLE IDENTITY SERVICES ──────────────────────────────────────────────
+function loadGIS() {
+  return new Promise(res => {
+    const s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.onload = res;
+    document.head.appendChild(s);
+  });
+}
+
+async function signIn() {
+  await loadGIS();
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: (resp) => {
+      if (resp.error) { log('Error de autenticación: ' + resp.error, 'err'); return; }
+      accessToken = resp.access_token;
+      loadUserInfo();
+    }
+  });
+  tokenClient.requestAccessToken({ prompt: 'consent' });
+}
+
+async function loadUserInfo() {
+  const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+  const u = await r.json();
+  document.getElementById('userAvatar').src = u.picture || '';
+  document.getElementById('userName').textContent = u.name || 'Usuario';
+  document.getElementById('userEmail').textContent = u.email || '';
+  document.getElementById('folderDisplay').textContent = FOLDER_ID;
+  document.getElementById('authSection').style.display = 'none';
+  document.getElementById('userBar').style.display = 'block';
+  document.getElementById('panelInput').style.display = 'block';
+}
+
+function signOut() {
+  accessToken = null;
+  document.getElementById('authSection').style.display = 'block';
+  document.getElementById('userBar').style.display = 'none';
+  document.getElementById('panelInput').style.display = 'none';
+  document.getElementById('panelFiles').style.display = 'none';
+}
+
+// ── URL RESOLUTION ────────────────────────────────────────────────────────
+function resolveUrl(href, pageUrl) {
+  const ch = href.replace(/ /g,'%20').replace(/\[/g,'%5B').replace(/\]/g,'%5D');
+  const cb = pageUrl.replace(/ /g,'%20').replace(/\[/g,'%5B').replace(/\]/g,'%5D');
+  try { return new URL(ch, cb).href; }
+  catch {
+    const base = cb.substring(0, cb.lastIndexOf('/') + 1);
+    if (ch.startsWith('http')) return ch;
+    if (ch.startsWith('/')) return new URL(cb).origin + ch;
+    return base + ch;
+  }
+}
+
+// ── SCAN ──────────────────────────────────────────────────────────────────
+function scan() {
+  const html    = document.getElementById('htmlInput').value.trim();
+  const pageUrl = document.getElementById('baseUrl').value.trim();
+  if (!html)    { log('Pegá el HTML primero.','err'); return; }
+  if (!pageUrl) { log('Ingresá la URL de la página.','err'); return; }
+
+  files = [];
+  document.getElementById('logBox').innerHTML = '';
+  document.getElementById('panelFiles').style.display = 'block';
+  document.getElementById('pw').style.display = 'none';
+  document.getElementById('summary').style.display = 'none';
+
+  const doc  = new DOMParser().parseFromString(html, 'text/html');
+  const seen = new Set();
+
+  doc.querySelectorAll('a[href]').forEach(a => {
+    const href = (a.getAttribute('href') || '').trim();
+    if (!href || href.startsWith('javascript') || href.startsWith('#') || href.startsWith('mailto')) return;
+    const full = resolveUrl(href, pageUrl);
+    if (seen.has(full)) return;
+    seen.add(full);
+    const path = full.split('?')[0].split('#')[0];
+    const name = decodeURIComponent(path.split('/').pop() || href);
+    const ext  = name.includes('.') ? name.split('.').pop().toLowerCase() : '';
+    if (!TARGET_EXT.includes(ext)) return;
+    files.push({ url: full, name, ext, selected: true, status: 'wait' });
+  });
+
+  log(`${files.length} archivo(s) detectado(s).`, files.length ? 'ok' : 'warn');
+  renderTable();
+}
+
+// ── TABLE ─────────────────────────────────────────────────────────────────
+function renderTable() {
+  const tb = document.getElementById('ftbody');
+  tb.innerHTML = '';
+  files.forEach((f, i) => {
+    const ec = TARGET_EXT.includes(f.ext) ? (['xls','xlsx','xlsm'].includes(f.ext)?'xls':f.ext) : 'other';
+    const sc = {wait:'s-wait',fetch:'s-fetch',up:'s-up',ok:'s-ok',err:'s-err'}[f.status]||'s-wait';
+    const st = {wait:'—',fetch:'descargando…',up:'subiendo…',ok:'✓ en Drive',err:'✗ error'}[f.status]||'—';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="checkbox" class="cb" ${f.selected?'checked':''} onchange="files[${i}].selected=this.checked;renderBtnUp()"></td>
+      <td><span class="ext-badge ext-${ec}">${f.ext}</span></td>
+      <td style="word-break:break-all;font-family:'IBM Plex Mono',monospace;font-size:.7rem">${f.name}</td>
+      <td><span class="dl-status ${sc}">${st}</span></td>`;
+    tb.appendChild(tr);
+  });
+  renderBtnUp();
+}
+
+function renderBtnUp() {
+  const n = files.filter(f => f.selected).length;
+  const b = document.getElementById('btnUp');
+  b.style.display = n > 0 ? 'flex' : 'none';
+  b.textContent = `⬆ Subir ${n} archivo${n!==1?'s':''} a Drive`;
+}
+
+function toggleAll(cb) { files.forEach(f => f.selected = cb.checked); renderTable(); }
+function deselAll()    { files.forEach(f => f.selected = false); renderTable(); }
+function selExt(exts)  { const s = new Set(exts.split(',')); files.forEach(f => f.selected = s.has(f.ext)); renderTable(); }
+
+// ── LOG ───────────────────────────────────────────────────────────────────
+function log(msg, cls='info') {
+  const b = document.getElementById('logBox');
+  const s = document.createElement('span');
+  s.className = cls;
+  s.textContent = `[${new Date().toTimeString().slice(0,8)}] ${msg}`;
+  b.appendChild(s);
+  b.scrollTop = b.scrollHeight;
+}
+
+// ── UPLOAD ────────────────────────────────────────────────────────────────
+async function startUpload() {
+  if (!accessToken) { log('Primero conectate con Google.','err'); return; }
+  stopFlag = false;
+  const todo = files.filter(f => f.selected && f.status !== 'ok');
+  if (!todo.length) { log('No hay archivos seleccionados.','warn'); return; }
+
+  const delay = parseInt(document.getElementById('delayRange').value);
+  document.getElementById('btnUp').style.display = 'none';
+  document.getElementById('btnStop').style.display = 'flex';
+  document.getElementById('pw').style.display = 'block';
+  document.getElementById('summary').style.display = 'flex';
+
+  let ok = 0, err = 0, skip = 0;
+
+  for (let i = 0; i < todo.length; i++) {
+    if (stopFlag) { skip = todo.length - i; log(`Detenido. ${skip} omitidos.`,'warn'); break; }
+
+    const f = todo[i];
+    document.getElementById('pb').style.width = Math.round((i/todo.length)*100) + '%';
+    document.getElementById('pl').textContent = `${i+1}/${todo.length} — ${f.name}`;
+    f.status = 'fetch'; renderTable();
+    log(`⬇ Descargando: ${f.name}`,'info');
+
+    try {
+      // 1. Fetch del archivo desde BCU
+      const res = await fetch(f.url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob   = await res.blob();
+      const base64 = await blobToBase64(blob);
+      const mime   = MIME_MAP[f.ext] || MIME_MAP.default;
+
+      log(`⬆ Subiendo a Drive: ${f.name}`,'info');
+      f.status = 'up'; renderTable();
+
+      // 2. Upload a Google Drive via REST API
+      await uploadToDrive(base64, f.name, mime);
+
+      f.status = 'ok'; ok++;
+      log(`✓ ${f.name} → Drive ✓`,'ok');
+
+    } catch(e) {
+      f.status = 'err'; err++;
+      log(`✗ ${f.name}: ${e.message}`,'err');
+    }
+
+    renderTable();
+    document.getElementById('sumOk').textContent  = ok;
+    document.getElementById('sumErr').textContent  = err;
+    document.getElementById('sumSkip').textContent = skip;
+
+    if (i < todo.length - 1 && !stopFlag) await sleep(delay);
+  }
+
+  document.getElementById('pb').style.width = '100%';
+  document.getElementById('pl').textContent = `Completado — ${ok} subidos · ${err} errores · ${skip} omitidos`;
+  document.getElementById('btnStop').style.display = 'none';
+  document.getElementById('btnUp').style.display = 'flex';
+  log(`Finalizado: ${ok} ok, ${err} errores, ${skip} omitidos.`, ok>0?'ok':'warn');
+}
+
+// ── DRIVE UPLOAD via multipart REST ───────────────────────────────────────
+async function uploadToDrive(base64, name, mime) {
+  // Decodificar base64 a bytes
+  const binary = atob(base64);
+  const bytes  = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+
+  const boundary = '-------BCUUploadBoundary';
+  const metadata = JSON.stringify({ name, parents: [FOLDER_ID] });
+
+  // Construir multipart body
+  const metaPart  = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n`;
+  const filePart1 = `--${boundary}\r\nContent-Type: ${mime}\r\n\r\n`;
+  const closePart = `\r\n--${boundary}--`;
+
+  const metaBytes  = new TextEncoder().encode(metaPart);
+  const file1Bytes = new TextEncoder().encode(filePart1);
+  const closeBytes = new TextEncoder().encode(closePart);
+
+  const body = new Uint8Array(metaBytes.length + file1Bytes.length + bytes.length + closeBytes.length);
+  let offset = 0;
+  [metaBytes, file1Bytes, bytes, closeBytes].forEach(b => { body.set(b, offset); offset += b.length; });
+
+  const res = await fetch(
+    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': `multipart/related; boundary="${boundary}"`,
+        'Content-Length': body.length
+      },
+      body
+    }
+  );
+
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Drive API ${res.status}: ${txt.slice(0,120)}`);
+  }
+  return await res.json();
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────
+function blobToBase64(blob) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload  = () => res(r.result.split(',')[1]);
+    r.onerror = () => rej(new Error('Error leyendo blob'));
+    r.readAsDataURL(blob);
+  });
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function clearAll() {
+  files = [];
+  document.getElementById('htmlInput').value = '';
+  document.getElementById('baseUrl').value   = '';
+  document.getElementById('logBox').innerHTML = '';
+  document.getElementById('panelFiles').style.display = 'none';
+}
+</script>
+</body>
+</html>
