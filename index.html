@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -369,7 +370,9 @@ async function startUpload() {
 
     try {
       // 1. Fetch del archivo desde BCU
-      const res = await fetch(f.url);
+      // Proxy CORS para evitar bloqueo del servidor BCU
+      const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(f.url);
+      const res = await fetch(proxyUrl);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const blob   = await res.blob();
       const base64 = await blobToBase64(blob);
