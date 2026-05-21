@@ -371,7 +371,7 @@ async function startUpload() {
     try {
       // 1. Fetch del archivo desde BCU
       // Proxy CORS para evitar bloqueo del servidor BCU
-      const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(f.url);
+      const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(f.url);
       const res = await fetch(proxyUrl);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const blob   = await res.blob();
